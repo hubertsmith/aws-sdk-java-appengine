@@ -36,6 +36,7 @@ import org.apache.http.ProtocolException;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.NTCredentials;
 import org.apache.http.client.HttpClient;
+import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.conn.scheme.LayeredSchemeSocketFactory;
@@ -48,6 +49,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.DefaultRedirectStrategy;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpProtocolParams;
@@ -55,10 +57,13 @@ import org.apache.http.protocol.HttpContext;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.http.appengine.GAEConnectionManager;
 
 /** Responsible for creating and configuring instances of Apache HttpClient4. */
 class HttpClientFactory {
-
+	
+	private static final int GAE_TIMEOUT_IN_MILLISECONDS = 10 * 1000;
+	
     /**
      * Creates a new HttpClient object using the specified AWS
      * ClientConfiguration to configure the client.
@@ -68,7 +73,7 @@ class HttpClientFactory {
      *            limits, etc).
      *
      * @return The new, configured HttpClient.
-     */
+     */	
     public HttpClient createHttpClient(ClientConfiguration config) {
         /* Form User-Agent information */
         String userAgent = config.getUserAgent();
@@ -141,6 +146,32 @@ class HttpClientFactory {
             }
         }
 
+        return httpClient;
+    }
+    
+    /**
+     * Create a new GAE-compatible HttpClient applying the supplied 
+     * ClientConfiguration where possible.
+     * 
+     * @param config
+     * @return
+     */
+    public HttpClient createGAEHttpClient(ClientConfiguration config){
+        /* Form User-Agent information */
+        String userAgent = config.getUserAgent();
+        if (!(userAgent.equals(ClientConfiguration.DEFAULT_USER_AGENT))) {
+            userAgent += ", " + ClientConfiguration.DEFAULT_USER_AGENT;
+        }
+
+        /* Set HTTP client parameters */
+        HttpParams httpClientParams = new BasicHttpParams();
+        HttpProtocolParams.setUserAgent(httpClientParams, userAgent);
+        
+        httpClientParams.setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, GAE_TIMEOUT_IN_MILLISECONDS);  
+        
+        ClientConnectionManager connectionManager = new GAEConnectionManager(); 
+        HttpClient httpClient = new DefaultHttpClient(connectionManager, httpClientParams);
+       
         return httpClient;
     }
 

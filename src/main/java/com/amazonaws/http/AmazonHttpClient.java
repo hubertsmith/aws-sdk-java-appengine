@@ -36,9 +36,14 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.params.HttpParams;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -49,6 +54,8 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Request;
 import com.amazonaws.ResponseMetadata;
 import com.amazonaws.handlers.RequestHandler;
+import com.amazonaws.http.appengine.GAEConnectionManager;
+import com.amazonaws.http.appengine.GAEUtils;
 import com.amazonaws.internal.CRC32MismatchException;
 import com.amazonaws.internal.CustomBackoffStrategy;
 import com.amazonaws.util.AWSRequestMetrics;
@@ -115,7 +122,8 @@ public class AmazonHttpClient {
      */
     public AmazonHttpClient(ClientConfiguration clientConfiguration) {
         this.config = clientConfiguration;
-        this.httpClient = httpClientFactory.createHttpClient(config);
+        this.httpClient = !GAEUtils.isGaeMode() ? httpClientFactory.createHttpClient(config)
+        		: httpClientFactory.createGAEHttpClient(config);
     }
 
     /**
